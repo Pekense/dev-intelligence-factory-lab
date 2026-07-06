@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: dif-postgres
+    environment:
+      POSTGRES_DB: logistics_dev
+      POSTGRES_USER: dev_user
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: dif-localstack
+    environment:
+      SERVICES: sqs,s3
+      DEBUG: "1"
+      AWS_DEFAULT_REGION: eu-west-1
+    ports:
+      - "4566:4566"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"

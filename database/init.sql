@@ -1,0 +1,2 @@
+-- Initial database script for DEV Intelligence Factory Lab
+-- The shipments table will be created in a later phase.
