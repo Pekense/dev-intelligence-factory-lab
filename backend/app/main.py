@@ -1,32 +1,15 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from sqlalchemy.orm import Session
 
-from app.config import ENVIRONMENT, DASHBOARD_REFRESH_INTERVAL_SECONDS
+from app.config import DASHBOARD_REFRESH_INTERVAL_SECONDS, ENVIRONMENT
+from app.database import get_db
+from app.models import Shipment
+from app.schemas import ShipmentResponse
 
 app = FastAPI(
     title="DEV Intelligence Factory API",
-    version="0.1.0"
+    version="0.2.0"
 )
-
-shipments = [
-    {
-        "id": 1,
-        "client": "ACME Pharma",
-        "destination": "Madrid",
-        "location": "Zaragoza Hub",
-        "status": "IN_TRANSIT",
-        "transport_service": "Cold Chain Express",
-        "eta": "2026-07-08T18:00:00"
-    },
-    {
-        "id": 2,
-        "client": "Global Retail",
-        "destination": "Barcelona",
-        "location": "Valencia Port",
-        "status": "PENDING",
-        "transport_service": "Maritime Standard",
-        "eta": "2026-07-09T09:30:00"
-    }
-]
 
 
 @app.get("/health")
@@ -44,6 +27,6 @@ def get_config():
     }
 
 
-@app.get("/shipments")
-def get_shipments():
-    return shipments
+@app.get("/shipments", response_model=list[ShipmentResponse])
+def get_shipments(db: Session = Depends(get_db)):
+    return db.query(Shipment).all()
