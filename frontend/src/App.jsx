@@ -23,6 +23,7 @@ function App() {
   const [lastRefresh, setLastRefresh] = useState("");
 
   const [changeRequests, setChangeRequests] = useState([]);
+  const [changeProposals, setChangeProposals] = useState([]);
   const [changeRequestForm, setChangeRequestForm] = useState(
     initialChangeRequestForm
   );
@@ -66,6 +67,22 @@ function App() {
     }
   }
 
+  async function loadChangeProposals() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/ai/change-proposals`);
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setChangeProposals(data);
+    } catch (error) {
+      setFactoryMessage("No se han podido cargar las propuestas IA.");
+      console.error(error);
+    }
+  }
+
   async function createChangeRequest(event) {
     event.preventDefault();
 
@@ -87,6 +104,7 @@ function App() {
       setChangeRequestForm(initialChangeRequestForm);
       setFactoryMessage("Solicitud registrada correctamente para revisión DEV.");
       await loadChangeRequests();
+      await loadChangeProposals();
     } catch (error) {
       setFactoryMessage("No se ha podido registrar la solicitud.");
       console.error(error);
@@ -105,6 +123,7 @@ function App() {
   useEffect(() => {
     loadShipments();
     loadChangeRequests();
+    loadChangeProposals();
 
     const intervalId = setInterval(
       loadShipments,
@@ -344,7 +363,14 @@ function App() {
           <section className="card">
             <div className="card-header">
               <h2>Solicitudes registradas</h2>
-              <button onClick={loadChangeRequests}>Actualizar</button>
+              <button
+                onClick={() => {
+                  loadChangeRequests();
+                  loadChangeProposals();
+                }}
+              >
+                Actualizar
+              </button>
             </div>
 
             <div className="request-list">
@@ -359,6 +385,40 @@ function App() {
                     <small>{request.constraints}</small>
                   </div>
                   <span className="status">{request.status}</span>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="card proposals-card">
+            <div className="card-header">
+              <h2>Propuestas generadas por Qwen</h2>
+              <button onClick={loadChangeProposals}>Actualizar propuestas</button>
+            </div>
+
+            <div className="request-list">
+              {changeProposals.length === 0 && (
+                <p className="info">Todavía no hay propuestas generadas por el agente IA.</p>
+              )}
+
+              {changeProposals.map((proposal) => (
+                <article className="proposal-item" key={proposal.id}>
+                  <div className="proposal-meta">
+                    <span className="summary-label">
+                      Proposal #{proposal.id} · Request #{proposal.change_request_id}
+                    </span>
+                    <span className="status">{proposal.review_status}</span>
+                  </div>
+
+                  <div className="proposal-details">
+                    <span>Modelo: {proposal.model_name}</span>
+                    <span>Confianza: {proposal.confidence_level || "N/A"}</span>
+                    <span>Creada: {proposal.created_at}</span>
+                  </div>
+
+                  <pre className="proposal-markdown">
+                    {proposal.proposal_markdown}
+                  </pre>
                 </article>
               ))}
             </div>
