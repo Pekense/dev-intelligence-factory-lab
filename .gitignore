@@ -14,7 +14,6 @@ npm-debug.log*
 *.tfstate
 *.tfstate.*
 tfplan
-.terraform.lock.hcl
 
 # Docker / Local
 *.log
