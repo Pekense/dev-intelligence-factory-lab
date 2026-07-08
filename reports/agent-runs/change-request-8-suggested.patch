@@ -1,0 +1,35 @@
+```diff
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index 1234567..89abcde 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -120,7 +120,7 @@ function App() {
+                     <td className="temperature">
+                       {shipment.temperature_current} ºC
+                     </td>
+-                    <td>{shipment.location}</td>
++                    <td><span className="location-badge">{shipment.location}</span></td>
+                     <td>
+                       <span className="alert">
+                         {shipment.alert_status}
+diff --git a/frontend/src/App.css b/frontend/src/App.css
+index abcde12..3456789 100644
+--- a/frontend/src/App.css
++++ b/frontend/src/App.css
+@@ -100,6 +100,14 @@ td {
+   border-top: 1px solid rgba(148, 163, 184, 0.12);
+   vertical-align: top;
+ }
++
++.location-badge {
++  display: inline-block;
++  padding: 0.5rem 1rem;
++  background: #2563eb;
++  color: white;
++  border-radius: 12px;
++  font-weight: 700;
++}
+ 
+ .status,
+ .alert {
+```
