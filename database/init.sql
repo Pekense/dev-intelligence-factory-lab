@@ -44,3 +44,38 @@ INSERT INTO shipments (
     'NORMAL',
     'Container registered at port'
 );
+
+CREATE TABLE IF NOT EXISTS ai_change_requests (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(180) NOT NULL,
+    requester VARCHAR(120) NOT NULL,
+    request_type VARCHAR(50) NOT NULL,
+    priority VARCHAR(30) NOT NULL DEFAULT 'MEDIUM',
+    description TEXT NOT NULL,
+    constraints TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'NEW',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO ai_change_requests (
+    title,
+    requester,
+    request_type,
+    priority,
+    description,
+    constraints,
+    status
+)
+SELECT
+    'Dashboard branding and shipment location visibility',
+    'CIO',
+    'FUNCTIONAL',
+    'HIGH',
+    'Add a corporate identity placeholder and make the current shipment location easier to identify.',
+    'DEV only. No real logos. No secrets. No production. Pipeline and human review required.',
+    'NEW'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM ai_change_requests
+    WHERE title = 'Dashboard branding and shipment location visibility'
+);
