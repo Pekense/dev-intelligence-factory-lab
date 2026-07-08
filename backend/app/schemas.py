@@ -40,3 +40,22 @@ class AIChangeRequestResponse(BaseModel):
     constraints: str | None = None
     status: str
     created_at: datetime
+
+
+class AIChangeProposalCreate(BaseModel):
+    change_request_id: int
+    model_name: str
+    proposal_markdown: str
+    confidence_level: str | None = None
+
+
+class AIChangeProposalResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    change_request_id: int
+    model_name: str
+    proposal_markdown: str
+    confidence_level: str | None = None
+    review_status: str
+    created_at: datetime
