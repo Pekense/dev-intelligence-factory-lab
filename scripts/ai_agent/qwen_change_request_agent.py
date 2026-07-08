@@ -22,6 +22,7 @@ from urllib import request, error
 
 
 FASTAPI_CHANGE_REQUESTS_URL = "http://localhost:8000/ai/change-requests"
+FASTAPI_CHANGE_PROPOSALS_URL = "http://localhost:8000/ai/change-proposals"
 OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "qwen-devsecops:latest"
 
@@ -305,9 +306,62 @@ def call_ollama(prompt: str) -> str:
         ) from exc
 
 
+
+def extract_confidence_level(proposal_markdown: str) -> str:
+    """
+    Extracts a simple confidence level from the generated proposal.
+    Defaults to Medium if the model output is ambiguous.
+    """
+
+    lower_proposal = proposal_markdown.lower()
+
+    if "confidence level" in lower_proposal or "confidence" in lower_proposal:
+        if "high" in lower_proposal or "alto" in lower_proposal:
+            return "High"
+        if "low" in lower_proposal or "bajo" in lower_proposal:
+            return "Low"
+
+    return "Medium"
+
+
+def save_change_proposal(
+    change_request: ChangeRequest,
+    proposal_markdown: str,
+) -> dict:
+    """
+    Persists the Qwen proposal in FastAPI/PostgreSQL for human review.
+    """
+
+    payload = {
+        "change_request_id": change_request.id,
+        "model_name": OLLAMA_MODEL,
+        "proposal_markdown": proposal_markdown,
+        "confidence_level": extract_confidence_level(proposal_markdown),
+    }
+
+    data = json.dumps(payload).encode("utf-8")
+
+    req = request.Request(
+        FASTAPI_CHANGE_PROPOSALS_URL,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with request.urlopen(req, timeout=30) as response:
+            response_body = response.read().decode("utf-8")
+            return json.loads(response_body)
+
+    except error.URLError as exc:
+        raise RuntimeError(
+            f"Could not save proposal through FastAPI at {FASTAPI_CHANGE_PROPOSALS_URL}. "
+            "Check that the backend is running and /ai/change-proposals is available."
+        ) from exc
+
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Local Qwen connector for DEV AI change requests."
+        description="Local governed Qwen connector for DEV AI change requests."
     )
     parser.add_argument(
         "--id",
@@ -333,11 +387,20 @@ def main() -> None:
 
     prompt = build_prompt(change_request)
 
-    print("=== Sending controlled DEV prompt to local Qwen ===\n")
-    response = call_ollama(prompt)
+    print("=== Sending governed DEV prompt to local Qwen ===\n")
+    proposal_markdown = call_ollama(prompt)
 
-    print("=== Qwen controlled proposal ===\n")
-    print(response)
+    print("=== Qwen governed proposal ===\n")
+    print(proposal_markdown)
+
+    print("\n=== Saving proposal for human review ===\n")
+    saved_proposal = save_change_proposal(change_request, proposal_markdown)
+
+    print("=== Proposal saved for review ===")
+    print(f"Proposal ID: {saved_proposal['id']}")
+    print(f"Change request ID: {saved_proposal['change_request_id']}")
+    print(f"Review status: {saved_proposal['review_status']}")
+    print(f"Confidence level: {saved_proposal['confidence_level']}")
 
 
 if __name__ == "__main__":
