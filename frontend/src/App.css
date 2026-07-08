@@ -312,3 +312,46 @@ tr:hover td {
     grid-template-columns: 1fr;
   }
 }
+
+.proposals-card {
+  grid-column: 1 / -1;
+}
+
+.proposal-item {
+  display: grid;
+  gap: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.72);
+  border-radius: 16px;
+  padding: 1rem;
+}
+
+.proposal-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.proposal-details {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.proposal-markdown {
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: rgba(2, 6, 23, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+  color: #dbeafe;
+  padding: 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
