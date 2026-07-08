@@ -4,9 +4,11 @@ from sqlalchemy.orm import Session
 
 from app.config import DASHBOARD_REFRESH_INTERVAL_SECONDS, ENVIRONMENT
 from app.database import get_db
-from app.models import AIChangeRequest, Shipment
+from app.models import AIChangeProposal, AIChangeRequest, Shipment
 from app.schemas import (
     AIChangeRequestCreate,
+    AIChangeProposalCreate,
+    AIChangeProposalResponse,
     AIChangeRequestResponse,
     ShipmentResponse,
 )
@@ -75,3 +77,28 @@ def create_ai_change_request(
     db.refresh(change_request)
 
     return change_request
+
+
+@app.get("/ai/change-proposals", response_model=list[AIChangeProposalResponse])
+def get_ai_change_proposals(db: Session = Depends(get_db)):
+    return db.query(AIChangeProposal).order_by(AIChangeProposal.created_at.desc()).all()
+
+
+@app.post("/ai/change-proposals", response_model=AIChangeProposalResponse)
+def create_ai_change_proposal(
+    proposal: AIChangeProposalCreate,
+    db: Session = Depends(get_db)
+):
+    change_proposal = AIChangeProposal(
+        change_request_id=proposal.change_request_id,
+        model_name=proposal.model_name,
+        proposal_markdown=proposal.proposal_markdown,
+        confidence_level=proposal.confidence_level,
+        review_status="PENDING_REVIEW",
+    )
+
+    db.add(change_proposal)
+    db.commit()
+    db.refresh(change_proposal)
+
+    return change_proposal

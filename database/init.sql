@@ -79,3 +79,23 @@ WHERE NOT EXISTS (
     FROM ai_change_requests
     WHERE title = 'Dashboard branding and shipment location visibility'
 );
+
+CREATE TABLE IF NOT EXISTS ai_change_proposals (
+    id SERIAL PRIMARY KEY,
+    change_request_id INTEGER NOT NULL REFERENCES ai_change_requests(id),
+    model_name VARCHAR(120) NOT NULL,
+    proposal_markdown TEXT NOT NULL,
+    confidence_level VARCHAR(30),
+    review_status VARCHAR(50) NOT NULL DEFAULT 'PENDING_REVIEW',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ai_change_proposals (
+    id SERIAL PRIMARY KEY,
+    change_request_id INTEGER NOT NULL REFERENCES ai_change_requests(id),
+    model_name VARCHAR(120) NOT NULL,
+    proposal_markdown TEXT NOT NULL,
+    confidence_level VARCHAR(30),
+    status VARCHAR(50) NOT NULL DEFAULT 'PROPOSED',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
