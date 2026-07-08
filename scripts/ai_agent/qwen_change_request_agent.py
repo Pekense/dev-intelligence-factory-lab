@@ -18,6 +18,7 @@ This script:
 import argparse
 import json
 from dataclasses import dataclass
+from pathlib import Path
 from urllib import request, error
 
 
@@ -359,6 +360,121 @@ def save_change_proposal(
             "Check that the backend is running and /ai/change-proposals is available."
         ) from exc
 
+
+def read_allowed_patch_files() -> str:
+    """
+    Reads the current content of files allowed for patch generation.
+    This reduces hallucinations by giving Qwen the real source code.
+    """
+
+    allowed_files = [
+        "frontend/src/App.jsx",
+        "frontend/src/App.css",
+    ]
+
+    sections = []
+
+    for file_path in allowed_files:
+        path = Path(file_path)
+
+        if not path.exists():
+            sections.append(f"FILE: {file_path}\nSTATUS: missing")
+            continue
+
+        content = path.read_text()
+        sections.append(
+            f"FILE: {file_path}\n"
+            f"CURRENT CONTENT START\n"
+            f"{content}\n"
+            f"CURRENT CONTENT END"
+        )
+
+    return "\n\n".join(sections)
+
+
+
+def build_patch_prompt(change_request: ChangeRequest) -> str:
+    """
+    Builds a controlled prompt asking Qwen for a suggested unified diff.
+    The patch is not applied automatically.
+    """
+
+    repository_context = build_repository_context()
+    allowed_file_contents = read_allowed_patch_files()
+
+    return f"""
+You are a governed local AI software engineering assistant.
+
+Your task is to generate a MINIMAL suggested unified diff.
+This patch will NOT be applied automatically.
+
+Repository context:
+{repository_context}
+
+Allowed file contents:
+{allowed_file_contents}
+
+Change request:
+
+ID: {change_request.id}
+Title: {change_request.title}
+Requested by: {change_request.requested_by}
+Status: {change_request.status}
+
+Description:
+{change_request.description}
+
+Allowed files for this patch:
+- frontend/src/App.jsx
+- frontend/src/App.css
+
+Hard rules:
+- Use only the real file contents provided above.
+- Do not invent components.
+- Do not invent imports.
+- Do not invent files.
+- Do not create new files.
+- Do not modify backend files.
+- Do not modify database files.
+- Do not modify Terraform files.
+- Do not suggest commands.
+- Do not commit.
+- Do not merge.
+- Do not apply the patch.
+- Keep the change minimal.
+- The dashboard already displays the current shipment location using shipment.location.
+- Do not add duplicate location columns.
+- Do not create or use new fields such as shipment.location_updated, shipment.current_location, shipment.gps_location, or similar.
+- Use only the existing field: shipment.location.
+- The correct frontend change is to improve the existing <td>{{shipment.location}}</td> rendering.
+- Prefer wrapping shipment.location in a visual badge/span.
+- Improve the visual presentation of the existing location value.
+
+Expected output:
+- Return only a unified diff patch.
+- The diff must only reference:
+  frontend/src/App.jsx
+  frontend/src/App.css
+- Do not wrap the diff in Markdown fences.
+- Do not add confidence text outside the diff.
+"""
+
+def save_suggested_patch(
+    change_request: ChangeRequest,
+    patch_content: str,
+) -> Path:
+    """
+    Saves the Qwen-generated suggested patch for human review.
+    """
+
+    output_dir = Path("reports/agent-runs")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    output_path = output_dir / f"change-request-{change_request.id}-suggested.patch"
+    output_path.write_text(patch_content)
+
+    return output_path
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Local governed Qwen connector for DEV AI change requests."
@@ -367,6 +483,12 @@ def main() -> None:
         "--id",
         type=int,
         help="Specific ai_change_requests ID to analyze.",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["proposal", "patch"],
+        default="proposal",
+        help="Execution mode: proposal saves an AI proposal; patch saves a suggested patch file.",
     )
 
     args = parser.parse_args()
@@ -383,7 +505,23 @@ def main() -> None:
     print(f"Selected change request ID: {change_request.id}")
     print(f"Title: {change_request.title}")
     print(f"Requested by: {change_request.requested_by}")
-    print(f"Status: {change_request.status}\n")
+    print(f"Status: {change_request.status}")
+    print(f"Mode: {args.mode}\n")
+
+    if args.mode == "patch":
+        prompt = build_patch_prompt(change_request)
+
+        print("=== Sending governed PATCH prompt to local Qwen ===\n")
+        patch_content = call_ollama(prompt)
+
+        output_path = save_suggested_patch(change_request, patch_content)
+
+        print("=== Suggested patch saved for human review ===")
+        print(f"Patch file: {output_path}")
+        print("\nReview it with:")
+        print(f"cat {output_path}")
+        print("\nThis script did not modify source code.")
+        return
 
     prompt = build_prompt(change_request)
 

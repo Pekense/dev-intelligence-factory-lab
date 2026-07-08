@@ -247,7 +247,9 @@ function App() {
                         <tr key={shipment.id}>
                           <td>{shipment.client}</td>
                           <td>{shipment.destination}</td>
-                          <td>{shipment.location}</td>
+                          <td>
+  <span className="location-badge">{shipment.location}</span>
+</td>
                           <td>
                             <span className="status">{shipment.status}</span>
                           </td>
